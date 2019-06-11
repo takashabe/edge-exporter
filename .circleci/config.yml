@@ -1,0 +1,15 @@
+version: 3
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.12
+
+    working_directory: ~/github.com/takashabe/edge-router
+
+    steps:
+      - checkout
+
+      - run:
+          name: Run unit test
+          command: |
+            make test

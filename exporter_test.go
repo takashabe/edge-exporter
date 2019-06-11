@@ -1,4 +1,4 @@
-package edgeexporter_test
+package edgeexporter
 
 import (
 	"context"
@@ -6,12 +6,33 @@ import (
 	"os"
 	"testing"
 
-	edgeexporter "github.com/takashabe/edge-exporter"
+	"github.com/stretchr/testify/assert"
 	"go.opencensus.io/trace"
 )
 
+type (
+	emptyExporter  struct{}
+	emptyExporter2 struct{}
+)
+
+func (*emptyExporter) ExportSpan(_ *trace.SpanData) {}
+
+func (*emptyExporter2) ExportSpan(_ *trace.SpanData) {}
+
+// TODO: internal test
+func TestExportersList(t *testing.T) {
+	edge := EdgeExporter{}
+	edge.RegisterExporter(&emptyExporter{})
+	edge.RegisterExporter(&emptyExporter{})
+	edge.RegisterExporter(&emptyExporter2{})
+	assert.Equal(t, len(edge.exporters.Load()), 2)
+
+  edge.UnregisterExporter(&emptyExporter{})
+	assert.Equal(t, len(edge.exporters.Load()), 1)
+}
+
 func TestBundling(t *testing.T) {
-	exporter := &edgeexporter.EdgeExporter{
+	exporter := &EdgeExporter{
 		OutStream: os.Stdout,
 	}
 	trace.RegisterExporter(exporter)
