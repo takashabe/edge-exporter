@@ -1,9 +1,6 @@
 package edgeexporter
 
 import (
-	"context"
-	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,26 +21,10 @@ func TestRegisterAndUnregisterExporter(t *testing.T) {
 	edge.RegisterExporter(&emptyExporter{})
 	edge.RegisterExporter(&emptyExporter{})
 	edge.RegisterExporter(&emptyExporter2{})
-  // TODO: internal test
+	// TODO: internal test
 	assert.Equal(t, len(edge.exporters.Load()), 2)
 
-  edge.UnregisterExporter(&emptyExporter{})
-  // TODO: internal test
+	edge.UnregisterExporter(&emptyExporter{})
+	// TODO: internal test
 	assert.Equal(t, len(edge.exporters.Load()), 1)
-}
-
-func TestBundling(t *testing.T) {
-	exporter := &EdgeExporter{
-		OutStream: os.Stdout,
-	}
-	trace.RegisterExporter(exporter)
-
-	for i := 0; i < 10; i++ {
-		_, span := trace.StartSpan(
-			context.Background(),
-			fmt.Sprintf("span_%d", i),
-			trace.WithSampler(trace.AlwaysSample()),
-		)
-		span.End()
-	}
 }

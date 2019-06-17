@@ -1,9 +1,9 @@
 package edgeexporter
 
 import (
-	"io"
 	"reflect"
 	"sync"
+	"time"
 
 	"go.opencensus.io/trace"
 )
@@ -18,7 +18,6 @@ func (l *exportersList) Store(e trace.Exporter) bool {
 	defer l.mu.Unlock()
 
 	for _, exp := range l.list {
-		// TODO: cmp
 		if reflect.DeepEqual(e, exp) {
 			return false
 		}
@@ -38,7 +37,6 @@ func (l *exportersList) Delete(e trace.Exporter) bool {
 	defer l.mu.Unlock()
 
 	for i, exp := range l.list {
-		// TODO: cmp
 		if reflect.DeepEqual(e, exp) {
 			l.list = append(l.list[:i], l.list[i+1:]...)
 			return true
@@ -49,9 +47,8 @@ func (l *exportersList) Delete(e trace.Exporter) bool {
 
 type EdgeExporter struct {
 	exporters exportersList
-	sampler   trace.Sampler
 
-	OutStream io.Writer
+	Interval time.Duration
 }
 
 func (e *EdgeExporter) RegisterExporter(exp trace.Exporter) {
@@ -63,6 +60,10 @@ func (e *EdgeExporter) UnregisterExporter(exp trace.Exporter) {
 }
 
 func (e *EdgeExporter) ExportSpan(sd *trace.SpanData) {
-	// TODO: imlements sampler
-	// TODO: export to e.exporters
+	// TODO: Store spans and choose a tail latency span
+	//       emit the spans each exporter every interval times.
+
+	for _, exp := range e.exporters.Load() {
+		exp.ExportSpan(sd)
+	}
 }
