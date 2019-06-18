@@ -40,7 +40,7 @@ func (f *fakeCountExporter) ExportSpan(_ *trace.SpanData) {
 	atomic.AddInt32(&f.cnt, 1)
 }
 
-func TestExportSpan(t *testing.T) {
+func TestExportSpanWithLimiter(t *testing.T) {
 	tests := []struct {
 		exportInterval  time.Duration
 		spanEndInterval time.Duration
@@ -65,6 +65,12 @@ func TestExportSpan(t *testing.T) {
 			spanEndCount:    15,
 			wantCnt:         1,
 		},
+		{
+			exportInterval:  0,
+			spanEndInterval: 0,
+			spanEndCount:    5,
+			wantCnt:         5,
+		},
 	}
 	for _, tt := range tests {
 		fakeExporter := &fakeCountExporter{}
@@ -82,4 +88,35 @@ func TestExportSpan(t *testing.T) {
 
 		assert.Equal(t, int32(tt.wantCnt), fakeExporter.cnt)
 	}
+}
+
+type fakeTailExporter struct {
+	sd *trace.SpanData
+}
+
+func (f *fakeTailExporter) ExportSpan(sd *trace.SpanData) {
+	f.sd = sd
+}
+
+func TestExportSpanWithTailLantecy(t *testing.T) {
+	fakeTailExporter := &fakeTailExporter{}
+	exporter := New(WithExportInterval(50 * time.Millisecond))
+	exporter.RegisterExporter(fakeTailExporter)
+
+	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
+	trace.RegisterExporter(exporter)
+
+	_, span := trace.StartSpan(context.Background(), "span")
+	span.End()
+	// consume a first limiter token
+	time.Sleep(50 * time.Millisecond)
+
+	_, span2 := trace.StartSpan(context.Background(), "span2")
+	time.Sleep(20 * time.Millisecond)
+	span2.End()
+
+	_, span3 := trace.StartSpan(context.Background(), "span3")
+	span3.End()
+
+	assert.Equal(t, "span2", fakeTailExporter.sd.Name)
 }

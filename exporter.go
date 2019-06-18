@@ -91,10 +91,8 @@ func (e *EdgeExporter) UnregisterExporter(exp trace.Exporter) {
 }
 
 func (e *EdgeExporter) ExportSpan(sd *trace.SpanData) {
-	// TODO: Store spans and choose a tail latency span
-	//       emit the spans each exporter every interval times.
+	e.storeTailLatencySpan(sd)
 	if !e.limiter.Allow() {
-		e.tail = sd
 		return
 	}
 
@@ -103,4 +101,17 @@ func (e *EdgeExporter) ExportSpan(sd *trace.SpanData) {
 		exp.ExportSpan(sd)
 	}
 	e.exportMu.Unlock()
+}
+
+func (e *EdgeExporter) storeTailLatencySpan(sd *trace.SpanData) {
+	if e.tail == nil {
+		e.tail = sd
+		return
+	}
+
+	oldLatency := e.tail.EndTime.Sub(e.tail.StartTime)
+	latency := sd.EndTime.Sub(sd.StartTime)
+	if oldLatency < latency {
+		e.tail = sd
+	}
 }
