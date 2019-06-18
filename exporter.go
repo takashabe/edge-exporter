@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go.opencensus.io/trace"
+	"golang.org/x/time/rate"
 )
 
 type exportersList struct {
@@ -47,8 +48,38 @@ func (l *exportersList) Delete(e trace.Exporter) bool {
 
 type EdgeExporter struct {
 	exporters exportersList
+	tail      *trace.SpanData
+	exportMu  sync.Mutex
 
-	Interval time.Duration
+	interval time.Duration
+	limiter  *rate.Limiter
+}
+
+const (
+	DefaultExportInterval = time.Second
+)
+
+type Option func(*EdgeExporter)
+
+func WithExportInterval(t time.Duration) Option {
+	return func(e *EdgeExporter) {
+		e.interval = t
+	}
+}
+
+func New(opts ...Option) *EdgeExporter {
+	e := &EdgeExporter{
+		interval: DefaultExportInterval,
+	}
+
+	for _, opt := range opts {
+		opt(e)
+	}
+
+	limit := rate.Every(e.interval)
+	e.limiter = rate.NewLimiter(limit, 1)
+
+	return e
 }
 
 func (e *EdgeExporter) RegisterExporter(exp trace.Exporter) {
@@ -62,8 +93,14 @@ func (e *EdgeExporter) UnregisterExporter(exp trace.Exporter) {
 func (e *EdgeExporter) ExportSpan(sd *trace.SpanData) {
 	// TODO: Store spans and choose a tail latency span
 	//       emit the spans each exporter every interval times.
+	if !e.limiter.Allow() {
+		e.tail = sd
+		return
+	}
 
+	e.exportMu.Lock()
 	for _, exp := range e.exporters.Load() {
 		exp.ExportSpan(sd)
 	}
+	e.exportMu.Unlock()
 }
