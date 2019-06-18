@@ -2,7 +2,6 @@ package edgeexporter
 
 import (
 	"context"
-	"fmt"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -38,36 +37,49 @@ type fakeCountExporter struct {
 }
 
 func (f *fakeCountExporter) ExportSpan(_ *trace.SpanData) {
-	fmt.Println("fakeCounterExporter.ExportSpan")
 	atomic.AddInt32(&f.cnt, 1)
 }
 
 func TestExportSpan(t *testing.T) {
 	tests := []struct {
-		interval time.Duration
-		wantCnt  int
+		exportInterval  time.Duration
+		spanEndInterval time.Duration
+		spanEndCount    int
+		wantCnt         int
 	}{
 		{
-			interval: 100 * time.Millisecond,
-			wantCnt:  1,
+			exportInterval:  100 * time.Millisecond,
+			spanEndInterval: 10 * time.Millisecond,
+			spanEndCount:    5,
+			wantCnt:         1,
+		},
+		{
+			exportInterval:  100 * time.Millisecond,
+			spanEndInterval: 10 * time.Millisecond,
+			spanEndCount:    15,
+			wantCnt:         2,
+		},
+		{
+			exportInterval:  200 * time.Millisecond,
+			spanEndInterval: 10 * time.Millisecond,
+			spanEndCount:    15,
+			wantCnt:         1,
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
-		t.Run("", func(t *testing.T) {
-			fakeExporter := &fakeCountExporter{}
-			exporter := New(WithExportInterval(tt.interval))
-			exporter.RegisterExporter(fakeExporter)
+		fakeExporter := &fakeCountExporter{}
+		exporter := New(WithExportInterval(tt.exportInterval))
+		exporter.RegisterExporter(fakeExporter)
 
-			trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
-			trace.RegisterExporter(exporter)
+		trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
+		trace.RegisterExporter(exporter)
 
-			for i := 0; i < 10; i++ {
-				_, span := trace.StartSpan(context.Background(), "span")
-				span.End()
-			}
+		for i := 0; i < tt.spanEndCount; i++ {
+			_, span := trace.StartSpan(context.Background(), "span")
+			span.End()
+			time.Sleep(tt.spanEndInterval)
+		}
 
-			assert.Equal(t, int32(tt.wantCnt), fakeExporter.cnt)
-		})
+		assert.Equal(t, int32(tt.wantCnt), fakeExporter.cnt)
 	}
 }
