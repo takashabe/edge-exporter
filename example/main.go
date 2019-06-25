@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
-	"net"
 	"net/http"
 	"os"
 	"sync/atomic"
@@ -12,7 +10,6 @@ import (
 	"contrib.go.opencensus.io/exporter/stackdriver"
 	edgeexporter "github.com/takashabe/edge-exporter"
 	"go.opencensus.io/trace"
-	"golang.org/x/net/netutil"
 )
 
 func main() {
@@ -23,7 +20,7 @@ func main() {
 		panic(err)
 	}
 
-	edge := edgeexporter.New(edgeexporter.WithExportInterval(time.Second))
+	edge := edgeexporter.New(edgeexporter.WithExportInterval(10*time.Second))
 	edge.RegisterExporter(sd)
 
 	trace.RegisterExporter(edge)
@@ -33,11 +30,7 @@ func main() {
 
 	http.HandleFunc("/", handler)
 
-	l, err := net.Listen("tcp", ":8080")
-	if err != nil {
-		panic(err)
-	}
-	log.Fatal(http.Serve(netutil.LimitListener(l, 10), nil))
+	http.ListenAndServe(":8080", nil)
 }
 
 var cnt int64
@@ -46,7 +39,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 	_, span := trace.StartSpan(context.Background(), "handler")
 	c := atomic.LoadInt64(&cnt)
 	if c%5 == 0 {
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 	}
 	span.End()
 	atomic.AddInt64(&cnt, 1)

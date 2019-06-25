@@ -4,7 +4,7 @@ IMAGE =
 all: build docker-build docker-push deploy
 
 build:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o bin/app .
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o bin/app .
 
 docker-build:
 	docker build -t $(IMAGE) .
