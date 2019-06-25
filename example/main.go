@@ -37,26 +37,17 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	log.Fatal(http.Serve(netutil.LimitListener(l, 100), nil))
+	log.Fatal(http.Serve(netutil.LimitListener(l, 10), nil))
 }
 
 var cnt int64
 
 func handler(w http.ResponseWriter, req *http.Request) {
-	startTime := time.Now()
 	_, span := trace.StartSpan(context.Background(), "handler")
-
 	c := atomic.LoadInt64(&cnt)
 	if c%5 == 0 {
 		time.Sleep(100 * time.Millisecond)
 	}
-
-	latency := time.Now().Sub(startTime)
-	span.AddAttributes(trace.Int64Attribute("latency", latency.Nanoseconds()))
-	span.AddAttributes(trace.Int64Attribute("count", c))
 	span.End()
-
-	log.Printf("count=%d, latency=%v", c, latency.Seconds())
-
 	atomic.AddInt64(&cnt, 1)
 }
