@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"sync/atomic"
@@ -12,9 +12,8 @@ import (
 	"contrib.go.opencensus.io/exporter/stackdriver"
 	edgeexporter "github.com/takashabe/edge-exporter"
 	"go.opencensus.io/trace"
+	"golang.org/x/net/netutil"
 )
-
-var cnt int32
 
 func main() {
 	sd, err := stackdriver.NewExporter(stackdriver.Options{
@@ -24,7 +23,7 @@ func main() {
 		panic(err)
 	}
 
-	edge := edgeexporter.New(edgeexporter.WithExportInterval(10 * time.Second))
+	edge := edgeexporter.New(edgeexporter.WithExportInterval(time.Second))
 	edge.RegisterExporter(sd)
 
 	trace.RegisterExporter(edge)
@@ -32,26 +31,32 @@ func main() {
 		DefaultSampler: trace.AlwaysSample(),
 	})
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		startTime := time.Now()
-		_, span := trace.StartSpan(context.Background(), "handler")
+	http.HandleFunc("/", handler)
 
-		c := atomic.LoadInt32(&cnt)
-		if c%5 == 0 {
-			time.Sleep(time.Second)
-		}
-
-		latency := startTime.Sub(time.Now())
-		span.AddAttributes(trace.Int64Attribute("latency", latency.Nanoseconds()))
-		span.AddAttributes(trace.Int64Attribute("count", int64(c)))
-		span.End()
-
-		atomic.AddInt32(&cnt, 1)
-	})
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	l, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		panic(err)
 	}
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
+	log.Fatal(http.Serve(netutil.LimitListener(l, 100), nil))
+}
+
+var cnt int64
+
+func handler(w http.ResponseWriter, req *http.Request) {
+	startTime := time.Now()
+	_, span := trace.StartSpan(context.Background(), "handler")
+
+	c := atomic.LoadInt64(&cnt)
+	if c%5 == 0 {
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	latency := time.Now().Sub(startTime)
+	span.AddAttributes(trace.Int64Attribute("latency", latency.Nanoseconds()))
+	span.AddAttributes(trace.Int64Attribute("count", c))
+	span.End()
+
+	log.Printf("count=%d, latency=%v", c, latency.Seconds())
+
+	atomic.AddInt64(&cnt, 1)
 }

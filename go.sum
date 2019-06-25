@@ -42,6 +42,9 @@ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZN
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
+github.com/takashabe/edge-exporter v0.0.0-20190618154922-20baa84040a8/go.mod h1:eP4C49PiGBat0W51hk8YIu9Z+8Vaky+hBqu8Gd+EC+E=
+github.com/takashabe/edge-exporter/example v0.0.0-20190625014906-6d86caf92bce h1:JFywulfm45htok/948BffN9y5UAtwBAvaiCmT4jnqvE=
+github.com/takashabe/edge-exporter/example v0.0.0-20190625014906-6d86caf92bce/go.mod h1:goWPud4Fh8z4XbLo9wMq6dDjxV11uILovE2qdc/vzKM=
 github.com/takashabe/oc-propagation-demo v0.0.0-20190623161446-3c05e1b2570f h1:vBrwu8W5zDdE7x5jBKxDn49ZFs+u3T276IVCuLMSthM=
 github.com/takashabe/oc-propagation-demo v0.0.0-20190623161446-3c05e1b2570f/go.mod h1:fdLcPloXE57/HyXwuhZyXX2BT1fPrM+mRxxtroOnj/M=
 go.opencensus.io v0.21.0/go.mod h1:mSImk1erAIZhrmZN+AvHh14ztQfjbGwt4TtuofqLduU=
