@@ -48,8 +48,10 @@ func (l *exportersList) Delete(e trace.Exporter) bool {
 
 type EdgeExporter struct {
 	exporters exportersList
-	tail      *trace.SpanData
-	exportMu  sync.Mutex
+
+	tail        *trace.SpanData
+	tailLatency time.Duration
+	tailMu      sync.Mutex
 
 	interval time.Duration
 	limiter  *rate.Limiter
@@ -96,22 +98,33 @@ func (e *EdgeExporter) ExportSpan(sd *trace.SpanData) {
 		return
 	}
 
-	e.exportMu.Lock()
-	for _, exp := range e.exporters.Load() {
-		exp.ExportSpan(sd)
+	e.tailMu.Lock()
+	defer e.tailMu.Unlock()
+
+	if e.tail == nil {
+		return
 	}
-	e.exportMu.Unlock()
+	for _, exp := range e.exporters.Load() {
+		exp.ExportSpan(e.tail)
+	}
+	e.tail = nil
+	e.tailLatency = 0
 }
 
 func (e *EdgeExporter) storeTailLatencySpan(sd *trace.SpanData) {
+	// TODO: performance
+	e.tailMu.Lock()
+	defer e.tailMu.Unlock()
+
+	latency := sd.EndTime.Sub(sd.StartTime)
 	if e.tail == nil {
 		e.tail = sd
+		e.tailLatency = latency
 		return
 	}
 
-	oldLatency := e.tail.EndTime.Sub(e.tail.StartTime)
-	latency := sd.EndTime.Sub(sd.StartTime)
-	if oldLatency < latency {
+	if e.tailLatency < latency {
 		e.tail = sd
+		e.tailLatency = latency
 	}
 }
