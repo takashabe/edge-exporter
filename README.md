@@ -2,7 +2,7 @@
 
 _Currently, this project is in alpha state_
 
-edge-exporter provides tracing the tail latency span.
+edge-exporter is an opencensus exporter and provides tracing the tail latency span.
 
 ## Example
 
